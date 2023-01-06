@@ -16,7 +16,7 @@ import re
 BASE_URL = "https://racing.hkjc.com/racing/information/English/Racing/RaceCard.aspx?RaceDate="
 Race="&RaceNo=1"
 dates = [
-  "2023-01-05",
+  "2023-01-08",
 ]
 
 mapping = [0, 1, 2, 3, 6, 16, 8, 14, 19, 4, 13, 23, 25]
@@ -86,8 +86,9 @@ def scraping_starter_data(table_rows, meet, race_name, race_standby):
     jockey = list(filter(None, re.split("(\-d)|\(|\)", rowEntry[9])))
     rowEntry[9] = jockey[0]
     rowEntry[10] = jockey[1] if len(jockey) > 1 else ""
-    if rowEntry[6].endswith("Scratched"):
-      rowEntry[6].replace("Scratched", "")
+    if rowEntry[6].endswith("(Scratched)"):
+      tempEntry = rowEntry[6]
+      rowEntry[6] = tempEntry.replace("(Scratched)", "")
       rowEntry[9] = 'Scratched'
       pass
     
@@ -125,8 +126,14 @@ HrRacedate,HrRaceNo,HrStarterStatus,HrNo,HrLast6Run,HrClothesColor,HrName,HrBran
 race_name_xpath = "/html/body/div/div[4]/table/thead/tr/td[1]"
 same_day_race_link_xpaths = "//*[@id='innerContent']/div[2]/div[3]/table/tbody/tr/td/a"
 racecard_info_1_xpath = "//*[@id='innerContent']/div[2]/div[4]/div[2]"
-reserve_table_row_xpath ="/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[8]/table/tbody/tr"
+# reserve_table_row_xpath ="/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[8]/table/tbody/tr"
+reserve_table_row_xpath ="//*[@id='standbylist']/tbody/tr"
 table_row_xpath = "//*[@id='racecardlist']/tbody/tr/td/table/tbody/tr"
+click_to_open_xpath = "//*[@id='hplnkColSelect']"
+click_refresh_xpath = "//*[@id='ColSelectBody']/form/table/thead/tr/td/table/tbody/tr/td[2]/a"
+
+mystarter_list_input_xpath = "//*[@id='ColSelectBody']/form/table/tbody/tr/td/input"
+mystarter_list_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[6]/form/table/tbody/tr"
 
 
 count = 0
@@ -134,8 +141,26 @@ race_name = ""
 # Begin grabbing data
 for meet in dates:
   driver.get(BASE_URL + meet.replace('-','/')+Race)
-  input("Press Enter to continue...")
+  driver.implicitly_wait(20)
+  # input("Press Enter to continue...")
+  click_element = driver.find_element(By.XPATH, click_to_open_xpath)
+  click_element.click()
+
+  if (check_exists_by_xpath(mystarter_list_xpath)):
+    starterlist_table_rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, mystarter_list_xpath)))
+    pass
+  starterlist_table_rows = driver.find_elements(By.XPATH, mystarter_list_xpath)
+
+  for row in starterlist_table_rows:
+    cols = row.find_elements(By.XPATH, mystarter_list_input_xpath)
+    for col in cols:
+      driver.execute_script("arguments[0].setAttribute('checked','checked')", col)  
+
+  refresh_element = driver.find_element(By.XPATH, click_refresh_xpath)
+  refresh_element.click()
+
   print("Scraping Race Card: " + meet)
+  
   race_entry = []
   race_entry.append(tableHeader)
   reserverace_entry = []
