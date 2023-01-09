@@ -12,14 +12,21 @@ from selenium.common.exceptions import WebDriverException
 import pandas as pd
 import os.path
 import re
+from selenium.webdriver.chrome.options import Options
+from enum import Enum
+
 
 BASE_URL = "https://racing.hkjc.com/racing/information/English/Racing/RaceCard.aspx?RaceDate="
 Race="&RaceNo=1"
 dates = [
-  "2023-01-08",
+  "2023-01-11",
 ]
+BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/English/racing/RaceCard.aspx"
 
 mapping = [0, 1, 2, 3, 6, 16, 8, 14, 19, 4, 13, 23, 25]
+mappingstarter = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+monthString = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
 race_entry = []
 
  
@@ -62,9 +69,16 @@ tableHeader=[
   "HrRaceCardComm"
   ]
 
-driver = webdriver.Chrome()
+driver_exe = 'chromedriver'
+options = Options()
+options.add_argument("--headless")
+driver = webdriver.Chrome(driver_exe, options=options)
+# driver = webdriver.Chrome()
 
 wait = WebDriverWait(driver, 20)
+
+def getMonth(str):
+  return monthString.index(str) + 1
 
 def check_exists_by_xpath(xpath):
   try:
@@ -82,18 +96,23 @@ def scraping_starter_data(table_rows, meet, race_name, race_standby):
     cols = row.find_elements(By.TAG_NAME, 'td')
     
     for col in cols: rowEntry.append(col.text)
-    
+    realEntry = ["" for i in range(36)]
+    for i in range(len(rowEntry)):
+      realEntry[i] = rowEntry[mappingstarter[i]]
+
     jockey = list(filter(None, re.split("(\-d)|\(|\)", rowEntry[9])))
-    rowEntry[9] = jockey[0]
-    rowEntry[10] = jockey[1] if len(jockey) > 1 else ""
-    if rowEntry[6].endswith("(Scratched)"):
-      tempEntry = rowEntry[6]
-      rowEntry[6] = tempEntry.replace("(Scratched)", "")
-      rowEntry[9] = 'Scratched'
+    last6run = '"' + rowEntry[4]
+    realEntry[4] = last6run
+    realEntry[9] = jockey[0]
+    realEntry[10] = jockey[1] if len(jockey) > 1 else ""
+    if realEntry[6].endswith("(Scratched)"):
+      tempEntry = realEntry[6]
+      realEntry[6] = tempEntry.replace("(Scratched)", "")
+      realEntry[9] = 'Scratched'
       pass
     
 
-    race_entry.append(rowEntry)
+    race_entry.append(realEntry)
 
 def scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby):
   first = True
@@ -106,8 +125,9 @@ def scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standb
     reserverowEntry.append(race_name)
     reserverowEntry.append(race_standby) 
     reservecols = reserverow.find_elements(By.TAG_NAME, 'td')
-    for reservecol in reservecols:
-      reserverowEntry.append(reservecol.text)
+    for reservecol in reservecols: reserverowEntry.append(reservecol.text)
+    last6run = '"' + reserverowEntry[9]
+    reserverowEntry[9] = last6run
     realEntry = ["" for i in range(36)]
     for i in range(len(reserverowEntry)):
       realEntry[mapping[i]] = reserverowEntry[i]
@@ -139,123 +159,133 @@ mystarter_list_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[6]/for
 count = 0
 race_name = ""
 # Begin grabbing data
-for meet in dates:
-  driver.get(BASE_URL + meet.replace('-','/')+Race)
+
+driver.get(BASE_URL_NO_DATE)
+driver.implicitly_wait(20)
+
+meetEl = driver.find_element(By.XPATH, racecard_info_1_xpath)
+year = meetEl.text.split(',')[2]
+month_date = meetEl.text.split(',')[1]
+month = getMonth(list(filter(None, re.split("\s", month_date)))[0]) 
+date = list(filter(None, re.split("\s", month_date)))[1]
+meet = year + '/' +  str(month) + '/' + date
+click_element = driver.find_element(By.XPATH, click_to_open_xpath)
+click_element.click()
+
+if (check_exists_by_xpath(mystarter_list_xpath)):
+  starterlist_table_rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, mystarter_list_xpath)))
+  pass
+starterlist_table_rows = driver.find_elements(By.XPATH, mystarter_list_xpath)
+
+for row in starterlist_table_rows:
+  cols = row.find_elements(By.XPATH, mystarter_list_input_xpath)
+  for col in cols:
+    driver.execute_script("arguments[0].setAttribute('checked','checked')", col)  
+
+refresh_element = driver.find_element(By.XPATH, click_refresh_xpath)
+refresh_element.click()
+
+race_entry = []
+race_entry.append(tableHeader)
+reserverace_entry = []
+race_standby = []
+internalRaceCount = 1
+count += 1
+if os.path.isfile('Racescard_' + str(meet) + '.txt'):
+  pass
+else:
+  driver.get(BASE_URL_NO_DATE)
   driver.implicitly_wait(20)
-  # input("Press Enter to continue...")
-  click_element = driver.find_element(By.XPATH, click_to_open_xpath)
-  click_element.click()
-
-  if (check_exists_by_xpath(mystarter_list_xpath)):
-    starterlist_table_rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, mystarter_list_xpath)))
+  same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
+  same_day_links = [x.get_attribute("href") for x in same_day_selel] 
+  # Get first race - x columns y rows + race name, going, track type
+  #if not (check_exists_by_xpath(table_row_xpath)):
+  if not (check_exists_by_xpath(racecard_info_1_xpath)):
     pass
-  starterlist_table_rows = driver.find_elements(By.XPATH, mystarter_list_xpath)
-
-  for row in starterlist_table_rows:
-    cols = row.find_elements(By.XPATH, mystarter_list_input_xpath)
-    for col in cols:
-      driver.execute_script("arguments[0].setAttribute('checked','checked')", col)  
-
-  refresh_element = driver.find_element(By.XPATH, click_refresh_xpath)
-  refresh_element.click()
-
-  print("Scraping Race Card: " + meet)
-  
-  race_entry = []
-  race_entry.append(tableHeader)
-  reserverace_entry = []
-  race_standby = []
-  internalRaceCount = 1
-  count += 1
-  if os.path.isfile('Racescard_' + str(meet) + '.txt'):
-    continue
   else:
-    driver.get(BASE_URL + meet.replace('-','/')+Race)
-    driver.implicitly_wait(20)
-    same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
-    same_day_links = [x.get_attribute("href") for x in same_day_selel] 
-    # Get first race - x columns y rows + race name, going, track type
-    #if not (check_exists_by_xpath(table_row_xpath)):
-    if not (check_exists_by_xpath(racecard_info_1_xpath)):
-      continue
+
+    if (check_exists_by_xpath(race_name_xpath)):
+      tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
+      race_name = (tempEl.text)
+    if not (check_exists_by_xpath(table_row_xpath)):
+      rowEntry = []
+      rowEntry.append(meet)
+      rowEntry.append(race_name)
+      race_entry.append(rowEntry)
+
     else:
 
+      tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
+      table_rows = tempTableEl
 
-      if (check_exists_by_xpath(race_name_xpath)):
-        tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-        race_name = (tempEl.text)
-      if not (check_exists_by_xpath(table_row_xpath)):
-        rowEntry = []
-        rowEntry.append(meet)
-        rowEntry.append(race_name)
-        race_entry.append(rowEntry)
+    if (check_exists_by_xpath(reserve_table_row_xpath)):
+        tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
+        reserve_table_rows = tempTableEl2
 
+
+        race_name = 1
+      #race_name = driver.current_url
+      #race_name  = same_day_links
+        race_standby = "Starter"
+        scraping_starter_data(table_rows, meet, race_name, race_standby)
+        
+        race_standby = "Stand-by Starter"
+        scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
+
+        
+    # Get other races on same meet
+    for same_day_link in same_day_links:
+      print("Scraping Racecard " + same_day_link)
+      
+      driver.get(same_day_link)
+      driver.implicitly_wait(10)
+
+      # Scrape 2nd - n
+      #if not (check_exists_by_xpath(table_row_xpath)):
+      if not (check_exists_by_xpath(racecard_info_1_xpath)):  
+        continue
       else:
 
-        tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
-        table_rows = tempTableEl
+        if (check_exists_by_xpath(race_name_xpath)):
+          tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
+          race_name = (tempEl.text)
+        if not (check_exists_by_xpath(table_row_xpath)):
+          rowEntry = []
+          rowEntry.append(meet)
+          rowEntry.append(race_name)
+          race_entry.append(rowEntry)
+        else:   
+          tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
+          table_rows = tempTableEl
 
-      if (check_exists_by_xpath(reserve_table_row_xpath)):
-         tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
-         reserve_table_rows = tempTableEl2
+        if (check_exists_by_xpath(reserve_table_row_xpath)):
 
-
-         race_name = 1
-        #race_name = driver.current_url
-        #race_name  = same_day_links
-         race_standby = "Starter"
-         scraping_starter_data(table_rows, meet, race_name, race_standby)
-          
-         race_standby = "Stand-by Starter"
-         scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
-
-         
-      # Get other races on same meet
-      for same_day_link in same_day_links:
-        print("Scraping Racecard " + same_day_link)
+          tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
+          reserve_table_rows = tempTableEl2
         
-        driver.get(same_day_link)
-        driver.implicitly_wait(10)
-
-        # Scrape 2nd - n
-        #if not (check_exists_by_xpath(table_row_xpath)):
-        if not (check_exists_by_xpath(racecard_info_1_xpath)):  
-          continue
-        else:
- 
-          if (check_exists_by_xpath(race_name_xpath)):
-            tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-            race_name = (tempEl.text)
-          if not (check_exists_by_xpath(table_row_xpath)):
-            rowEntry = []
-            rowEntry.append(meet)
-            rowEntry.append(race_name)
-            race_entry.append(rowEntry)
-          else:   
-            tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
-            table_rows = tempTableEl
-
-          if (check_exists_by_xpath(reserve_table_row_xpath)):
-
-            tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
-            reserve_table_rows = tempTableEl2
+        table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+        race_name += 1
+  
+        race_standby = "Starter"
+        scraping_starter_data(table_rows, meet, race_name, race_standby)
           
-          table_rows = driver.find_elements(By.XPATH, table_row_xpath)
-          race_name += 1
-   
-          race_standby = "Starter"
-          scraping_starter_data(table_rows, meet, race_name, race_standby)
-            
-          reserve_table_rows = driver.find_elements(By.XPATH, reserve_table_row_xpath)
-          race_standby = "Stand-by Starter"
-          scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
-          
-      # Save file as csv
-      df = pd.DataFrame(race_entry)
-      print(df.head())
-      csv_data = df.to_csv("./Racescard_" + str(meet) + ".txt", index=False)
-      df.to_csv("./Racescard_" + str(meet) + ".csv", header=False, index=False)
-      print("Saved " + str(meet))
+        reserve_table_rows = driver.find_elements(By.XPATH, reserve_table_row_xpath)
+        race_standby = "Stand-by Starter"
+        scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
+        
+    # Save file as csv
+    df = pd.DataFrame(race_entry)
+    outname = "Racescard_" + str(meet.replace('/','-'))
+    outdir = 'c:/Output'
+    if not os.path.exists(outdir):
+      os.makedirs(outdir)
+  
+    fullname = os.path.join(outdir, outname)    
+    csv_data = df.to_csv("./" + outname + ".txt", index=False)
+    df.to_csv("./" + outname + ".csv", header=False, index=False, encoding="utf-8")
+
+    csv_data = df.to_csv(fullname + ".txt", index=False)
+    df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
 
 driver.quit()
 
