@@ -15,17 +15,12 @@ import re
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 
-
-BASE_URL = "https://racing.hkjc.com/racing/information/English/Racing/RaceCard.aspx?RaceDate="
-Race="&RaceNo=1"
-dates = [
-  "2023-01-11",
-]
-BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/English/racing/RaceCard.aspx"
-
+# BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/English/racing/RaceCard.aspx"
+BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/Chinese/racing/RaceCard.aspx"
 mapping = [0, 1, 2, 3, 6, 16, 8, 14, 19, 4, 13, 23, 25]
 mappingstarter = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 monthString = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
 
 race_entry = []
 
@@ -73,12 +68,40 @@ driver_exe = 'chromedriver'
 options = Options()
 options.add_argument("--headless")
 driver = webdriver.Chrome(driver_exe, options=options)
-# driver = webdriver.Chrome()
 
 wait = WebDriverWait(driver, 20)
 
+def isEnglish():
+  languageEl = driver.find_element(By.XPATH, language_select_xpath)
+  language = languageEl.text
+  return True if not (re.search("English", language)) or re.search("English", BASE_URL_NO_DATE) else False
+
 def getMonth(str):
   return monthString.index(str) + 1
+
+def getDate():
+  meetEl = driver.find_element(By.XPATH, racecard_info_1_xpath)
+  year = ''
+  realmonth = ''
+  date = ''
+  if isEnglish():
+    year = meetEl.text.split(',')[2]
+    month_date = meetEl.text.split(',')[1]
+    month = str(getMonth(list(filter(None, re.split("\s", month_date)))[0]) )
+    realmonth = month if len(month) > 1 else "0" + month
+    date = list(filter(None, re.split("\s", month_date)))[1]
+    pass
+    return year + '-' +  realmonth + '-' + date
+  else:
+    temp = re.findall(r'\d+', meetEl.text.split(',')[0])
+    res = list(map(int, temp))
+    year = str(res[1])
+    month = str(res[2])
+    realmonth = month if len(month) > 1 else "0" + month
+    date = str(res[3])
+    pass
+    return year + '-' +  realmonth + '-' + date
+
 
 def check_exists_by_xpath(xpath):
   try:
@@ -154,6 +177,7 @@ click_refresh_xpath = "//*[@id='ColSelectBody']/form/table/thead/tr/td/table/tbo
 
 mystarter_list_input_xpath = "//*[@id='ColSelectBody']/form/table/tbody/tr/td/input"
 mystarter_list_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[6]/form/table/tbody/tr"
+language_select_xpath = "//*[@id='topNav']/div[1]/a[2]"
 
 
 count = 0
@@ -162,13 +186,7 @@ race_name = ""
 
 driver.get(BASE_URL_NO_DATE)
 driver.implicitly_wait(20)
-
-meetEl = driver.find_element(By.XPATH, racecard_info_1_xpath)
-year = meetEl.text.split(',')[2]
-month_date = meetEl.text.split(',')[1]
-month = getMonth(list(filter(None, re.split("\s", month_date)))[0]) 
-date = list(filter(None, re.split("\s", month_date)))[1]
-meet = year + '/' +  str(month) + '/' + date
+meet = getDate()
 click_element = driver.find_element(By.XPATH, click_to_open_xpath)
 click_element.click()
 
@@ -275,7 +293,7 @@ else:
         
     # Save file as csv
     df = pd.DataFrame(race_entry)
-    outname = "Racescard_" + str(meet.replace('/','-'))
+    outname = "Racescard_" + meet
     outdir = 'c:/Output'
     if not os.path.exists(outdir):
       os.makedirs(outdir)
