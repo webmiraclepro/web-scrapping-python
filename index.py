@@ -124,6 +124,7 @@ def scraping_starter_data(table_rows, meet, race_name, race_standby):
       realEntry[i] = rowEntry[mappingstarter[i]]
 
     jockey = list(filter(None, re.split("(\-d)|\(|\)", rowEntry[9])))
+    realEntry[22] = realEntry[22].replace(",","")
     last6run = '"' + rowEntry[4]
     realEntry[4] = last6run
     realEntry[9] = jockey[0]
@@ -181,7 +182,7 @@ language_select_xpath = "//*[@id='topNav']/div[1]/a[2]"
 
 
 count = 0
-race_name = ""
+race_name = 0
 # Begin grabbing data
 
 driver.get(BASE_URL_NO_DATE)
@@ -224,7 +225,7 @@ else:
 
     if (check_exists_by_xpath(race_name_xpath)):
       tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-      race_name = (tempEl.text)
+      race_name = int(tempEl.text)
     if not (check_exists_by_xpath(table_row_xpath)):
       rowEntry = []
       rowEntry.append(meet)
@@ -237,18 +238,18 @@ else:
       table_rows = tempTableEl
 
     if (check_exists_by_xpath(reserve_table_row_xpath)):
-        tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
-        reserve_table_rows = tempTableEl2
+      tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
+      reserve_table_rows = tempTableEl2
 
 
-        race_name = 1
-      #race_name = driver.current_url
-      #race_name  = same_day_links
-        race_standby = "Starter"
-        scraping_starter_data(table_rows, meet, race_name, race_standby)
-        
-        race_standby = "Stand-by Starter"
-        scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
+      race_name = 1
+    #race_name = driver.current_url
+    #race_name  = same_day_links
+      race_standby = "Starter"
+      scraping_starter_data(table_rows, meet, race_name, race_standby)
+      
+      race_standby = "Stand-by Starter"
+      scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
 
         
     # Get other races on same meet
@@ -266,7 +267,7 @@ else:
 
         if (check_exists_by_xpath(race_name_xpath)):
           tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-          race_name = (tempEl.text)
+          race_name = int(tempEl.text)
         if not (check_exists_by_xpath(table_row_xpath)):
           rowEntry = []
           rowEntry.append(meet)
