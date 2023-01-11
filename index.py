@@ -14,6 +14,7 @@ import os.path
 import re
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
+from operator import itemgetter
 
 # BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/English/racing/RaceCard.aspx"
 BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/Chinese/racing/RaceCard.aspx"
@@ -21,9 +22,7 @@ mapping = [0, 1, 2, 3, 6, 16, 8, 14, 19, 4, 13, 23, 25]
 mappingstarter = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 monthString = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-
 race_entry = []
-
  
 tableHeader=[
   "HrRacedate",
@@ -81,9 +80,6 @@ def getMonth(str):
 
 def getDate():
   meetEl = driver.find_element(By.XPATH, racecard_info_1_xpath)
-  year = ''
-  realmonth = ''
-  date = ''
   if isEnglish():
     year = meetEl.text.split(',')[2]
     month_date = meetEl.text.split(',')[1]
@@ -101,7 +97,6 @@ def getDate():
     date = str(res[3])
     pass
     return year + '-' +  realmonth + '-' + date
-
 
 def check_exists_by_xpath(xpath):
   try:
@@ -134,7 +129,6 @@ def scraping_starter_data(table_rows, meet, race_name, race_standby):
       realEntry[6] = tempEntry.replace("(Scratched)", "")
       realEntry[9] = 'Scratched'
       pass
-    
 
     race_entry.append(realEntry)
 
@@ -164,30 +158,25 @@ Initialize variables:
 Data collected per entry: 
 HrRacedate,HrRaceNo,HrStarterStatus,HrNo,HrLast6Run,HrClothesColor,HrName,HrBrandNo,HrWeight,HrJockey,HrJockeyHandicap,HrOverWeight,HrDraw,HrStable,HrRating,HrRatingChg,HrBodyWeight,HrBodyWeightChg,HrBestTime,HrAge,HRWFA,HrSex,HrSeasonStakes,HrPriority,HrGear,HrOwner,HrSire,HrDam,HrImportCat,HrWebID,DateNo,Season,RaceID,SeasonRace,HrRaceCardComm
 
-
 """
-
-race_name_xpath = "/html/body/div/div[4]/table/thead/tr/td[1]"
+race_name_xpath = "//*[@id='innerContent']/div[2]/div[3]/table/tbody/tr/td/img"
 same_day_race_link_xpaths = "//*[@id='innerContent']/div[2]/div[3]/table/tbody/tr/td/a"
 racecard_info_1_xpath = "//*[@id='innerContent']/div[2]/div[4]/div[2]"
-# reserve_table_row_xpath ="/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[8]/table/tbody/tr"
 reserve_table_row_xpath ="//*[@id='standbylist']/tbody/tr"
 table_row_xpath = "//*[@id='racecardlist']/tbody/tr/td/table/tbody/tr"
 click_to_open_xpath = "//*[@id='hplnkColSelect']"
 click_refresh_xpath = "//*[@id='ColSelectBody']/form/table/thead/tr/td/table/tbody/tr/td[2]/a"
-
 mystarter_list_input_xpath = "//*[@id='ColSelectBody']/form/table/tbody/tr/td/input"
 mystarter_list_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[6]/form/table/tbody/tr"
 language_select_xpath = "//*[@id='topNav']/div[1]/a[2]"
 
-
-count = 0
-race_name = 0
 # Begin grabbing data
 
 driver.get(BASE_URL_NO_DATE)
 driver.implicitly_wait(20)
 meet = getDate()
+
+#initialize colums checking status start
 click_element = driver.find_element(By.XPATH, click_to_open_xpath)
 click_element.click()
 
@@ -203,13 +192,11 @@ for row in starterlist_table_rows:
 
 refresh_element = driver.find_element(By.XPATH, click_refresh_xpath)
 refresh_element.click()
+#initialize colums checking status end
 
 race_entry = []
-race_entry.append(tableHeader)
-reserverace_entry = []
 race_standby = []
-internalRaceCount = 1
-count += 1
+
 if os.path.isfile('Racescard_' + str(meet) + '.txt'):
   pass
 else:
@@ -225,7 +212,8 @@ else:
 
     if (check_exists_by_xpath(race_name_xpath)):
       tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-      race_name = int(tempEl.text)
+      race_name = re.findall(r'\d+', tempEl.get_attribute('src'))[0]
+
     if not (check_exists_by_xpath(table_row_xpath)):
       rowEntry = []
       rowEntry.append(meet)
@@ -240,17 +228,12 @@ else:
     if (check_exists_by_xpath(reserve_table_row_xpath)):
       tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
       reserve_table_rows = tempTableEl2
-
-
-      race_name = 1
-    #race_name = driver.current_url
-    #race_name  = same_day_links
-      race_standby = "Starter"
-      scraping_starter_data(table_rows, meet, race_name, race_standby)
-      
-      race_standby = "Stand-by Starter"
-      scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
-
+    #race_name = 1
+    race_standby = "Starter"
+    scraping_starter_data(table_rows, meet, race_name, race_standby)
+    
+    race_standby = "Stand-by Starter"
+    scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
         
     # Get other races on same meet
     for same_day_link in same_day_links:
@@ -260,14 +243,9 @@ else:
       driver.implicitly_wait(10)
 
       # Scrape 2nd - n
-      #if not (check_exists_by_xpath(table_row_xpath)):
       if not (check_exists_by_xpath(racecard_info_1_xpath)):  
         continue
       else:
-
-        if (check_exists_by_xpath(race_name_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-          race_name = int(tempEl.text)
         if not (check_exists_by_xpath(table_row_xpath)):
           rowEntry = []
           rowEntry.append(meet)
@@ -283,7 +261,7 @@ else:
           reserve_table_rows = tempTableEl2
         
         table_rows = driver.find_elements(By.XPATH, table_row_xpath)
-        race_name += 1
+        race_name = same_day_link.split('=')[3]
   
         race_standby = "Starter"
         scraping_starter_data(table_rows, meet, race_name, race_standby)
@@ -293,7 +271,9 @@ else:
         scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
         
     # Save file as csv
-    df = pd.DataFrame(race_entry)
+    res = sorted(race_entry, key = itemgetter(1))
+    res.insert(0, tableHeader)
+    df = pd.DataFrame(res)
     outname = "Racescard_" + meet
     outdir = 'c:/Output'
     if not os.path.exists(outdir):
