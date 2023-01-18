@@ -20,19 +20,13 @@ from operator import itemgetter
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx?RaceDate="
 #dates = ["2020-06-07","2020-06-03"]
 dates=[
-
-
-
 "2023-01-11",
-
-
-
 
 ]
 
 tableHeader=[
   "HrRaceRaUrComm",
-  "Replay"
+  "Replay",
   "Racedate",
   "RaceVenue",
   "RaceNo",
@@ -87,7 +81,6 @@ options.add_argument("--headless")
 driver = webdriver.Chrome(driver_exe, options=options)
 
 wait = WebDriverWait(driver, 5)
-
 
 def check_exists_by_xpath(xpath):
   try:
