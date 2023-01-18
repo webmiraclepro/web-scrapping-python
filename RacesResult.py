@@ -81,11 +81,13 @@ tableHeader=[
   ]
 
  
-#driver = webdriver.Firefox()
-#driver = webdriver.Chrome(r"C:\chromedriver")
-driver = webdriver.Chrome()
+driver_exe = 'chromedriver'
+options = Options()
+options.add_argument("--headless")
+driver = webdriver.Chrome(driver_exe, options=options)
 
 wait = WebDriverWait(driver, 5)
+
 
 def check_exists_by_xpath(xpath):
   try:
