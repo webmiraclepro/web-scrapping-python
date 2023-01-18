@@ -15,19 +15,22 @@ import re
 from selenium.webdriver.chrome.options import Options
 from operator import itemgetter
 
+import datelist
+from datelist import date_list_entry
+
 #Race Result
 #starting webdriver
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx?RaceDate="
 #dates = ["2020-06-07","2020-06-03"]
 dates=[
 "2023-01-11",
-
 ]
-
+xpath_string = []
+race_entry = []
 tableHeader=[
   "HrRaceRaUrComm",
   "Replay",
-  "Racedate",
+  "RaceDate",
   "RaceVenue",
   "RaceNo",
   "RaceIndex",
@@ -89,6 +92,39 @@ def check_exists_by_xpath(xpath):
       return False
   return True
 
+def scraping_race_result(table_rows):
+  for row in table_rows:
+    rowEntry = []
+
+    rowEntry.append(meet)
+    rowEntry.append(race_date_venue)
+    rowEntry.append(race_name)
+    rowEntry.append(race_going)
+    rowEntry.append(race_type)
+
+    rowEntry.append(race_CupName)
+    rowEntry.append(race_Stake)
+    rowEntry.append(race_Course)
+    #rowEntry.append(race_Sect1)
+    rowEntry.append(race_Sect1.replace("\n", ""))
+    #rowEntry.append(race_Sect2)
+    rowEntry.append(race_Sect2.replace("\n", ""))
+    #rowEntry.append(race_Sect3)
+    rowEntry.append(race_Sect3.replace("\n", ""))
+    #rowEntry.append(race_Sect4)
+    rowEntry.append(race_Sect4.replace("\n", ""))
+    #rowEntry.append(race_Sect5)
+    rowEntry.append(race_Sect5.replace("\n", ""))
+    #rowEntry.append(race_Sect6)
+    rowEntry.append(race_Sect6.replace("\n", ""))
+
+    
+    cols = row.find_elements(By.TAG_NAME, 'td')
+    for col in cols:
+      rowEntry.append(col.text)
+    race_entry.append(rowEntry)
+
+
 """
 Initialize variables: 
 
@@ -114,18 +150,8 @@ race_Sect4_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/t
 race_Sect5_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[7]"
 race_Sect6_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[8]"
 
-
-
-
-
-
-
-
-
-
-
-#race_name_xpath = "/html/body/div/div[4]/table/thead/tr/td[1]"
-
+race_date_list_option_xpath = "//*[@id='selectId']/option"
+race_num_index_xpath = "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]"
 
 
 race_table_xpath = string.Template('''/html/body/div/div[5]/table/tbody/tr[$row]/td[$col]''')
@@ -216,39 +242,8 @@ for meet in dates:
 
 
 
+    scraping_race_result(table_rows)  
       
-      
-    for row in table_rows:
-      rowEntry = []
-
-      rowEntry.append(meet)
-      rowEntry.append(race_date_venue)
-      rowEntry.append(race_name)
-      rowEntry.append(race_going)
-      rowEntry.append(race_type)
-
-      rowEntry.append(race_CupName)
-      rowEntry.append(race_Stake)
-      rowEntry.append(race_Course)
-      #rowEntry.append(race_Sect1)
-      rowEntry.append(race_Sect1.replace("\n", ""))
-      #rowEntry.append(race_Sect2)
-      rowEntry.append(race_Sect2.replace("\n", ""))
-      #rowEntry.append(race_Sect3)
-      rowEntry.append(race_Sect3.replace("\n", ""))
-      #rowEntry.append(race_Sect4)
-      rowEntry.append(race_Sect4.replace("\n", ""))
-      #rowEntry.append(race_Sect5)
-      rowEntry.append(race_Sect5.replace("\n", ""))
-      #rowEntry.append(race_Sect6)
-      rowEntry.append(race_Sect6.replace("\n", ""))
-
-  
-      cols = row.find_elements(By.TAG_NAME, 'td')
-      for col in cols:
-        rowEntry.append(col.text)
-      race_entry.append(rowEntry)
-    
     # Get other races on same meet
     for same_day_link in same_day_links:
       print("Scraping " + same_day_link)
@@ -269,8 +264,6 @@ for meet in dates:
       race_Sect4 = ""
       race_Sect5 = ""
       race_Sect6 = ""
-
-
 
       if not (check_exists_by_xpath(table_row_xpath)):
         continue
@@ -319,46 +312,23 @@ for meet in dates:
           race_Sect6 = (tempEl.text)        
         
         table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+        scraping_race_result(table_rows)
 
-        for row in table_rows:
-          rowEntry = []
-
-          rowEntry.append(meet)
-          rowEntry.append(race_date_venue)
-          rowEntry.append(race_name)
-          rowEntry.append(race_going)
-          rowEntry.append(race_type)
-
-          rowEntry.append(race_CupName)
-          rowEntry.append(race_Stake)
-          rowEntry.append(race_Course)
-          #rowEntry.append(race_Sect1)
-          rowEntry.append(race_Sect1.replace("\n", ""))
-          #rowEntry.append(race_Sect2)
-          rowEntry.append(race_Sect2.replace("\n", ""))
-          #rowEntry.append(race_Sect3)
-          rowEntry.append(race_Sect3.replace("\n", ""))
-          #rowEntry.append(race_Sect4)
-          rowEntry.append(race_Sect4.replace("\n", ""))
-          #rowEntry.append(race_Sect5)
-          rowEntry.append(race_Sect5.replace("\n", ""))
-          #rowEntry.append(race_Sect6)
-          rowEntry.append(race_Sect6.replace("\n", ""))
-
-          
-          cols = row.find_elements(By.TAG_NAME, 'td')
-          for col in cols:
-            rowEntry.append(col.text)
-          race_entry.append(rowEntry)
-        
     # Save file as csv
-    df = pd.DataFrame(race_entry)
-    print(df.head())
-    csv_data = df.to_csv("./Races_Result_" + str(meet) + ".txt", index=False)
-    print("Saved " + str(meet))
+    res = sorted(race_entry, key = itemgetter(1))
+    res.insert(0, tableHeader)
+    df = pd.DataFrame(res)
+    outname = "Races_Result_" + str(meet)
+    outdir = 'c:/Output'
+    if not os.path.exists(outdir):
+      os.makedirs(outdir)
+  
+    fullname = os.path.join(outdir, outname)    
+    csv_data = df.to_csv("./" + outname + ".txt", index=False)
+    df.to_csv("./" + outname + ".csv", header=False, index=False, encoding="utf-8")
 
-
-
+    csv_data = df.to_csv(fullname + ".txt", index=False)
+    df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
 
 
 driver.quit()

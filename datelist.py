@@ -16,7 +16,7 @@ from selenium.webdriver.chrome.options import Options
 from operator import itemgetter
 
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx"
-race_entry = []
+date_list_entry = []
 
 driver_exe = 'chromedriver'
 options = Options()
@@ -39,12 +39,12 @@ def getDate(rowtext):
     return year + '-' +  month + '-' + date + ','
 
 def scraping_date_list(table_rows):
-    for row in table_rows: race_entry.append(getDate(row.text))
+    for row in table_rows: date_list_entry.append(getDate(row.text))
 
 
 race_date_list_option_xpath = "//*[@id='selectId']/option"
 
-race_entry = []
+date_list_entry = []
 
 if os.path.isfile('Date_List'  + '.txt'):
     pass
@@ -56,7 +56,7 @@ else:
     scraping_date_list(tempEl)
 
     #Save file as txt
-    df = pd.DataFrame(race_entry)
+    df = pd.DataFrame(date_list_entry)
     outname = "Date_List"
     outdir = 'c:/Output'
     if not os.path.exists(outdir):
