@@ -37,13 +37,8 @@ xpath_string = [
   "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[4]/td[1]",
   "//*[@id='innerContent']/div[2]/div[4]/table/tbody/tr[3]/td[3]",
   "//*[@id='innerContent']/div[2]/div[4]/table/tbody/tr[3]/td[3]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[3]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[4]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[5]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[6]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[7]",
-  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[8]",
 ]
+
 race_entry = []
 tableHeader=[
   "HrRaceRaUrComm",
@@ -110,10 +105,6 @@ def check_exists_by_xpath(xpath):
       return False
   return True
 
-# race_raur_comm = ""
-# race_replay = ""
-# race_date = ""
-
 
 def scraping_race_result(table_rows):
   race_raur_comm = ""
@@ -160,7 +151,7 @@ def scraping_race_result(table_rows):
     race_class_distance_rating = rowEntry[7].split(" - ")
     rowEntry[7] = race_class_distance_rating[0]
     rowEntry[8] = race_class_distance_rating[1]
-    rowEntry[9] = race_class_distance_rating[2]
+    rowEntry[9] = re.findall(r'\(([^)]+)\)', race_class_distance_rating[2])[0] if len(race_class_distance_rating) > 2 else ""
     rowEntry[11] = rowEntry[11].split(" ")[1].replace(",", "")
     for sect in race_Sect: rowEntry.append(sect)
 
@@ -177,6 +168,8 @@ def scraping_race_result(table_rows):
     race_track_course = realEntry[12].split("-")
     realEntry[12] = race_track_course[0] if len(race_track_course) > 1 else realEntry[12]
     realEntry[13] = race_track_course[1] if len(race_track_course) > 1 else realEntry[13]
+    realEntry[26] = re.sub(r'\(([^)]*)\)', '', realEntry[26])
+    realEntry[27] = re.findall(r'\(([^)]+)\)', realEntry[27])[0]
 
     race_pos = realEntry[34].split(" ")[::-1]
     for i in range(6):
@@ -200,7 +193,8 @@ Data collected per entry:
 race_sects_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]"
 race_date_list_option_xpath = "//*[@id='selectId']/option"
 race_num_index_xpath = "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]"
-same_day_race_link_xpaths = "//div[2]/table/tbody/tr/td/a"
+same_day_race_link_xpaths = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[2]/table/tbody/tr/td/a"
+# same_day_race_link_xpaths = "//*[@id='innerContent']/div[2]/div[2]/table/tbody/tr/td/a"
 table_row_xpath = "//div[5]/table/tbody/tr"
 
 # Begin grabbing data
@@ -212,8 +206,9 @@ for meet in dates:
     continue
   else:
     driver.get(BASE_URL + meet)
-    driver.implicitly_wait(5)
-    same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)[:-1]
+    driver.implicitly_wait(20)
+    # same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
+    same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
     same_day_links = [x.get_attribute("href") for x in same_day_selel]  
 
     # Get first race - x columns y rows + race name, going, track type
@@ -245,7 +240,7 @@ for meet in dates:
         scraping_race_result(table_rows)
 
     # Save file as csv
-    res = sorted(race_entry, key = itemgetter(1))
+    res = sorted(race_entry, key = itemgetter(4))
     res.insert(0, tableHeader)
     df = pd.DataFrame(res)
     outname = "Races_Result_" + str(meet)
