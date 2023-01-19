@@ -21,10 +21,10 @@ from operator import itemgetter
 #Race Result
 #starting webdriver
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx?RaceDate="
-#dates = ["2020-06-07","2020-06-03"]
 dates=[
 "2023-01-11",
 ]
+
 xpath_string = [
   "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[3]/p[1]/span[1]",
   "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]",
@@ -150,7 +150,7 @@ def scraping_race_result(table_rows):
     rowEntry[5] = race_no_index[1]
     race_class_distance_rating = rowEntry[7].split(" - ")
     rowEntry[7] = race_class_distance_rating[0]
-    rowEntry[8] = race_class_distance_rating[1]
+    rowEntry[8] = re.findall(r'\d+', race_class_distance_rating[1])[0]
     rowEntry[9] = re.findall(r'\(([^)]+)\)', race_class_distance_rating[2])[0] if len(race_class_distance_rating) > 2 else ""
     rowEntry[11] = rowEntry[11].split(" ")[1].replace(",", "")
     for sect in race_Sect: rowEntry.append(sect)
@@ -167,7 +167,7 @@ def scraping_race_result(table_rows):
         realEntry[i] = rowEntry[mapping[i-24]]
     race_track_course = realEntry[12].split("-")
     realEntry[12] = race_track_course[0] if len(race_track_course) > 1 else realEntry[12]
-    realEntry[13] = race_track_course[1] if len(race_track_course) > 1 else realEntry[13]
+    realEntry[13] = re.findall(r'\"([^)]+)\"', race_track_course[1])[0] if len(race_track_course) > 1 else realEntry[13]
     realEntry[26] = re.sub(r'\(([^)]*)\)', '', realEntry[26])
     realEntry[27] = re.findall(r'\(([^)]+)\)', realEntry[27])[0]
 
