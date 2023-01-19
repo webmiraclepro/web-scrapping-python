@@ -15,8 +15,8 @@ import re
 from selenium.webdriver.chrome.options import Options
 from operator import itemgetter
 
-import datelist
-from datelist import date_list_entry
+# import datelist
+# from datelist import date_list_entry
 
 #Race Result
 #starting webdriver
@@ -25,7 +25,25 @@ BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResul
 dates=[
 "2023-01-11",
 ]
-xpath_string = []
+xpath_string = [
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[3]/p[1]/span[1]",
+  "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]",
+  "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]",
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[3]",
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[1]",
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[1]",
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[1]",
+  "//*[@id='innerContent']/div[2]/div[4]/table/tbody/tr[3]/td[1]",
+  "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[4]/td[1]",
+  "//*[@id='innerContent']/div[2]/div[4]/table/tbody/tr[3]/td[3]",
+  "//*[@id='innerContent']/div[2]/div[4]/table/tbody/tr[3]/td[3]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[3]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[4]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[5]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[6]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[7]",
+  # "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[8]",
+]
 race_entry = []
 tableHeader=[
   "HrRaceRaUrComm",
@@ -76,8 +94,8 @@ tableHeader=[
   "RaceID",
   "SeasonRace",
   ]
-
- 
+sectsmapping = [5, 4, 3, 2, 1, 0]
+mapping = [24, 25, 26, 26, 27, 28, 29, 30, 31, 32, 33, 33, 33, 33, 33, 33, 34, 35]
 driver_exe = 'chromedriver'
 options = Options()
 options.add_argument("--headless")
@@ -92,37 +110,82 @@ def check_exists_by_xpath(xpath):
       return False
   return True
 
+# race_raur_comm = ""
+# race_replay = ""
+# race_date = ""
+
+
 def scraping_race_result(table_rows):
+  race_raur_comm = ""
+  race_replay = ""
+  race_date = meet
+  race_Sect = []
+  race_pos = ["" for i in range(6)]
+
   for row in table_rows:
     rowEntry = []
+    rowEntry.append(race_raur_comm)
+    rowEntry.append(race_replay)
+    rowEntry.append(race_date)
+    for xpath in xpath_string:
+      if (check_exists_by_xpath(xpath)):
+        tempEl = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+        rowEntry.append(tempEl.text)
+        pass
+      else:
+        rowEntry.append("")
 
-    rowEntry.append(meet)
-    rowEntry.append(race_date_venue)
-    rowEntry.append(race_name)
-    rowEntry.append(race_going)
-    rowEntry.append(race_type)
-
-    rowEntry.append(race_CupName)
-    rowEntry.append(race_Stake)
-    rowEntry.append(race_Course)
-    #rowEntry.append(race_Sect1)
-    rowEntry.append(race_Sect1.replace("\n", ""))
-    #rowEntry.append(race_Sect2)
-    rowEntry.append(race_Sect2.replace("\n", ""))
-    #rowEntry.append(race_Sect3)
-    rowEntry.append(race_Sect3.replace("\n", ""))
-    #rowEntry.append(race_Sect4)
-    rowEntry.append(race_Sect4.replace("\n", ""))
-    #rowEntry.append(race_Sect5)
-    rowEntry.append(race_Sect5.replace("\n", ""))
-    #rowEntry.append(race_Sect6)
-    rowEntry.append(race_Sect6.replace("\n", ""))
-
+    sectEl = driver.find_element(By.XPATH, race_sects_xpath) 
+    sects = sectEl.find_elements(By.TAG_NAME, 'td')[::-1]
+    race_Sect = ["" for i in range(10)]
+    for i in range(len(sects) - 2):
+      race_Sect[sectsmapping[i]] = sects[i].text
     
+    race_sect51_52 = list(filter(None, race_Sect[4].split("\n")[1].split(" ")))
+    race_Sect[6] = race_sect51_52[0]
+    race_Sect[7] = race_sect51_52[1]
+    race_sect61_62 = list(filter(None, race_Sect[5].split("\n")[1].split(" ")))
+    race_Sect[8] = race_sect61_62[0]
+    race_Sect[9] = race_sect61_62[1]
+    race_Sect[4] = race_Sect[4].split("\n")[0]
+    race_Sect[5] = race_Sect[5].split("\n")[0]
+
+
+    race_venu = list(filter(None, rowEntry[3].split(" ")))
+    rowEntry[3] = race_venu[2]
+    temp = re.findall(r'\d+', rowEntry[4])
+    race_no_index = list(map(int, temp))
+    rowEntry[4] = race_no_index[0]
+    rowEntry[5] = race_no_index[1]
+    race_class_distance_rating = rowEntry[7].split(" - ")
+    rowEntry[7] = race_class_distance_rating[0]
+    rowEntry[8] = race_class_distance_rating[1]
+    rowEntry[9] = race_class_distance_rating[2]
+    rowEntry[11] = rowEntry[11].split(" ")[1].replace(",", "")
+    for sect in race_Sect: rowEntry.append(sect)
+
     cols = row.find_elements(By.TAG_NAME, 'td')
-    for col in cols:
-      rowEntry.append(col.text)
-    race_entry.append(rowEntry)
+    for col in cols: rowEntry.append(col.text)
+    realEntry = ["" for i in range(47)]
+    for i in range(len(realEntry)):
+      if i > 41 :
+        continue
+      if i < 24 :
+        realEntry[i] = rowEntry[i]
+      else :
+        realEntry[i] = rowEntry[mapping[i-24]]
+    race_track_course = realEntry[12].split("-")
+    realEntry[12] = race_track_course[0] if len(race_track_course) > 1 else realEntry[12]
+    realEntry[13] = race_track_course[1] if len(race_track_course) > 1 else realEntry[13]
+
+    race_pos = realEntry[34].split(" ")[::-1]
+    for i in range(6):
+      if i < len(race_pos):
+        realEntry[34 + 5 -i] = race_pos[i]
+      else:
+        realEntry[34 + 5 -i] = ""
+    realEntry[33] = '"' + realEntry[33]
+    race_entry.append(realEntry)
 
 
 """
@@ -134,54 +197,17 @@ Data collected per entry:
   declare_horse_wt, draw, lbw, running_pos, finish_time, win_odds
 """
 
-#race_date_venue ="/html/body/div/div[3]/p[1]/span[1]"
-race_date_venue_xpath="/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[3]/p[1]/span[1]"
-race_name_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/thead/tr/td[1]"
-#race_name_xpath = "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]"
-race_type_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[1]"
-race_going_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[2]/td[3]"
-race_CupName_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[3]/td[1]"
-race_Stake_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[4]/td[1]"
-race_Course_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[3]/td[3]"
-race_Sect1_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[3]"
-race_Sect2_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[4]"
-race_Sect3_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[5]"
-race_Sect4_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[6]"
-race_Sect5_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[7]"
-race_Sect6_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]/td[8]"
-
+race_sects_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/tbody/tr[5]"
 race_date_list_option_xpath = "//*[@id='selectId']/option"
 race_num_index_xpath = "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]"
-
-
-race_table_xpath = string.Template('''/html/body/div/div[5]/table/tbody/tr[$row]/td[$col]''')
-
 same_day_race_link_xpaths = "//div[2]/table/tbody/tr/td/a"
 table_row_xpath = "//div[5]/table/tbody/tr"
-
-count = 0
-
-race_date_venue =""
-race_name = ""
-race_going = ""
-race_type = ""
-race_CupName = ""
-race_Stake = ""
-race_Course = ""
-race_Sect1 = ""
-race_Sect2 = ""
-race_Sect3 = ""
-race_Sect4 = ""
-race_Sect5 = ""
-race_Sect6 = ""
-
 
 # Begin grabbing data
 for meet in dates:
   print("Scraping: " + meet)
   race_entry = []
   internalRaceCount = 1
-  count += 1
   if os.path.isfile('Races_Result_' + str(meet) + '.txt'):
     continue
   else:
@@ -200,48 +226,6 @@ for meet in dates:
       tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
       table_rows = tempTableEl
 
-    if (check_exists_by_xpath(race_date_venue_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_date_venue_xpath)))
-      race_date_venue = (tempEl.text)
-    if (check_exists_by_xpath(race_name_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-      race_name = (tempEl.text)
-    if (check_exists_by_xpath(race_going_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_going_xpath)))
-      race_going = (tempEl.text)
-    if (check_exists_by_xpath(race_type_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_type_xpath)))
-      race_type = (tempEl.text)
-    if (check_exists_by_xpath(race_Course_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Course_xpath)))
-      race_Course = (tempEl.text)
-    if (check_exists_by_xpath(race_CupName_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_CupName_xpath)))
-      race_CupName = (tempEl.text)    
-    if (check_exists_by_xpath(race_Stake_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Stake_xpath)))
-      race_Stake = (tempEl.text) 
-    if (check_exists_by_xpath(race_Sect1_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect1_xpath)))
-      race_Sect1 = (tempEl.text)
-    if (check_exists_by_xpath(race_Sect2_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect2_xpath)))
-      race_Sect2 = (tempEl.text)
-    if (check_exists_by_xpath(race_Sect3_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect3_xpath)))
-      race_Sect3 = (tempEl.text)   
-    if (check_exists_by_xpath(race_Sect4_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect4_xpath)))
-      race_Sect4 = (tempEl.text)
-    if (check_exists_by_xpath(race_Sect5_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect5_xpath)))
-      race_Sect5 = (tempEl.text)
-    if (check_exists_by_xpath(race_Sect6_xpath)):
-      tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect6_xpath)))
-      race_Sect6 = (tempEl.text)
-
-
-
     scraping_race_result(table_rows)  
       
     # Get other races on same meet
@@ -251,67 +235,13 @@ for meet in dates:
       driver.get(same_day_link)
       driver.implicitly_wait(5)
 
-      race_date_venue =""
-      race_name = ""
-      race_going = ""
-      race_type = ""
-      race_CupName = ""
-      race_Stake = ""
-      race_Course = ""
-      race_Sect1 = ""
-      race_Sect2 = ""
-      race_Sect3 = ""
-      race_Sect4 = ""
-      race_Sect5 = ""
-      race_Sect6 = ""
-
+      
       if not (check_exists_by_xpath(table_row_xpath)):
         continue
       else:
-
-        # Scrape 2nd - n
-        if (check_exists_by_xpath(race_date_venue_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_date_venue_xpath)))
-          race_date_venue = (tempEl.text)
-
-        if (check_exists_by_xpath(race_name_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH, race_name_xpath)))
-          race_name = (tempEl.text)
-        if (check_exists_by_xpath(race_going_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_going_xpath)))
-          race_going = (tempEl.text)
-        if (check_exists_by_xpath(race_type_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_type_xpath)))
-          race_type = (tempEl.text)
-        if (check_exists_by_xpath(race_Course_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Course_xpath)))
-          race_Course = (tempEl.text)
-        if (check_exists_by_xpath(race_CupName_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_CupName_xpath)))
-          race_CupName = (tempEl.text)
-        if (check_exists_by_xpath(race_Stake_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Stake_xpath)))
-          race_Stake = (tempEl.text)
-        if (check_exists_by_xpath(race_Sect1_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect1_xpath)))
-          race_Sect1 = (tempEl.text)
-        if (check_exists_by_xpath(race_Sect2_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect2_xpath)))
-          race_Sect2 = (tempEl.text)
-        if (check_exists_by_xpath(race_Sect3_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect3_xpath)))
-          race_Sect3 = (tempEl.text)   
-        if (check_exists_by_xpath(race_Sect4_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect4_xpath)))
-          race_Sect4 = (tempEl.text)
-        if (check_exists_by_xpath(race_Sect5_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect5_xpath)))
-          race_Sect5 = (tempEl.text)
-        if (check_exists_by_xpath(race_Sect6_xpath)):
-          tempEl = wait.until(EC.presence_of_element_located((By.XPATH,race_Sect6_xpath)))
-          race_Sect6 = (tempEl.text)        
-        
         table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+        
+        # Scrape 2nd - n
         scraping_race_result(table_rows)
 
     # Save file as csv
