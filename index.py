@@ -228,12 +228,12 @@ else:
     if (check_exists_by_xpath(reserve_table_row_xpath)):
       tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
       reserve_table_rows = tempTableEl2
-    #race_name = 1
-    race_standby = "Starter"
-    scraping_starter_data(table_rows, meet, race_name, race_standby)
-    
-    race_standby = "Stand-by Starter"
-    scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
+      #race_name = 1
+      race_standby = "Starter"
+      scraping_starter_data(table_rows, meet, race_name, race_standby)
+      
+      race_standby = "Stand-by Starter"
+      scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
         
     # Get other races on same meet
     for same_day_link in same_day_links:
@@ -260,15 +260,15 @@ else:
           tempTableEl2 = wait.until(EC.presence_of_all_elements_located((By.XPATH, reserve_table_row_xpath)))
           reserve_table_rows = tempTableEl2
         
-        table_rows = driver.find_elements(By.XPATH, table_row_xpath)
-        race_name = same_day_link.split('=')[3]
-  
-        race_standby = "Starter"
-        scraping_starter_data(table_rows, meet, race_name, race_standby)
-          
-        reserve_table_rows = driver.find_elements(By.XPATH, reserve_table_row_xpath)
-        race_standby = "Stand-by Starter"
-        scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
+          table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+          race_name = same_day_link.split('=')[3]
+    
+          race_standby = "Starter"
+          scraping_starter_data(table_rows, meet, race_name, race_standby)
+            
+          reserve_table_rows = driver.find_elements(By.XPATH, reserve_table_row_xpath)
+          race_standby = "Stand-by Starter"
+          scraping_stand_starter_data(reserve_table_rows, meet, race_name, race_standby)
         
     # Save file as csv
     res = sorted(race_entry, key = itemgetter(1))
