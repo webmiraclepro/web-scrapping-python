@@ -23,7 +23,7 @@ options = Options()
 options.add_argument("--headless")
 driver = webdriver.Chrome(driver_exe, options=options)
 
-wait = WebDriverWait(driver, 5)
+wait = WebDriverWait(driver, 20)
 
 def check_exists_by_xpath(xpath):
   try:
@@ -36,10 +36,11 @@ def getDate(rowtext):
     year = rowtext.split('/')[2]
     month = rowtext.split('/')[1]
     date = rowtext.split('/')[0]
-    return year + '-' +  month + '-' + date + ','
+    return str(year + '-' +  month + '-' + date)
 
 def scraping_date_list(table_rows):
     for row in table_rows: date_list_entry.append(getDate(row.text))
+    return date_list_entry
 
 
 race_date_list_option_xpath = "//*[@id='selectId']/option"
@@ -50,7 +51,7 @@ if os.path.isfile('Date_List'  + '.txt'):
     pass
 else:
     driver.get(BASE_URL)
-    driver.implicitly_wait(5)
+    driver.implicitly_wait(20)
 
     tempEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, race_date_list_option_xpath)))
     scraping_date_list(tempEl)

@@ -14,15 +14,19 @@ import os.path
 import re
 from selenium.webdriver.chrome.options import Options
 from operator import itemgetter
+from datelist import *
+
+
 
 # import datelist
 # from datelist import date_list_entry
 
 #Race Result
 #starting webdriver
+BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx"
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx?RaceDate="
 dates=[
-"2023-01-11",
+
 ]
 
 xpath_string = [
@@ -40,6 +44,7 @@ xpath_string = [
 ]
 
 race_entry = []
+total_race_entry = []
 tableHeader=[
   "HrRaceRaUrComm",
   "Replay",
@@ -106,9 +111,11 @@ def check_exists_by_xpath(xpath):
   return True
 
 
-def scraping_race_result(table_rows):
+def scraping_race_result(table_rows, meet):
+  global race_entry
+  global total_race_entry
   race_raur_comm = ""
-  race_replay = ""
+  race_replay = "https://racing.hkjc.com/racing/video/play.asp?type=replay-full&date=" + meet.replace("-", "") + '&no='
   race_date = meet
   race_Sect = []
   race_pos = ["" for i in range(6)]
@@ -146,6 +153,7 @@ def scraping_race_result(table_rows):
     rowEntry[3] = race_venu[2]
     temp = re.findall(r'\d+', rowEntry[4])
     race_no_index = list(map(int, temp))
+    rowEntry[1] = race_replay + "0" + str(race_no_index[0]) + "&lang=chi"
     rowEntry[4] = race_no_index[0]
     rowEntry[5] = race_no_index[1]
     race_class_distance_rating = rowEntry[7].split(" - ")
@@ -178,7 +186,18 @@ def scraping_race_result(table_rows):
       else:
         realEntry[34 + 5 -i] = ""
     realEntry[33] = '"' + realEntry[33]
+    a_cols = row.find_elements(By.TAG_NAME, 'a')
+
+    hr_webids = [x.get_attribute("href") for x in a_cols]
+    for webid in hr_webids:
+      if re.search("HorseId", webid):
+        hr_webid = webid.split("=")[1]
+        pass
+      else:
+        continue
+    realEntry[42] = hr_webid
     race_entry.append(realEntry)
+    total_race_entry.append(realEntry)
 
 
 """
@@ -194,66 +213,100 @@ race_sects_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[4]/table/t
 race_date_list_option_xpath = "//*[@id='selectId']/option"
 race_num_index_xpath = "//*[@id='innerContent']/div[2]/div[4]/table/thead/tr/td[1]"
 same_day_race_link_xpaths = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[2]/table/tbody/tr/td/a"
+webid_xpath = "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[5]/table/tbody/tr/td/a"
 # same_day_race_link_xpaths = "//*[@id='innerContent']/div[2]/div[2]/table/tbody/tr/td/a"
 table_row_xpath = "//div[5]/table/tbody/tr"
 
 # Begin grabbing data
-for meet in dates:
-  print("Scraping: " + meet)
-  race_entry = []
-  internalRaceCount = 1
-  if os.path.isfile('Races_Result_' + str(meet) + '.txt'):
-    continue
-  else:
-    driver.get(BASE_URL + meet)
-    driver.implicitly_wait(20)
-    # same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
-    same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
-    same_day_links = [x.get_attribute("href") for x in same_day_selel]  
+if os.path.isfile('Date_List.txt'):
+  file1 = open("Date_List.txt","r+") 
+  dates = file1.read()
+  pass
+else:
+  driver.get(BASE_URL_NO_DATE)
+  driver.implicitly_wait(20)
+  tempEl_datelist = wait.until(EC.presence_of_all_elements_located((By.XPATH, race_date_list_option_xpath)))
+  dates = scraping_date_list(tempEl_datelist)
 
-    # Get first race - x columns y rows + race name, going, track type
-    #tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
-    #table_rows = tempTableEl
 
-    if not (check_exists_by_xpath(table_row_xpath)):
+
+def scraping_raceresult(dates):
+
+  global total_race_entry
+  total_race_entry = []
+  global race_entry
+  for meet in dates:
+    print("Scraping: " + meet)
+    race_entry = []
+    internalRaceCount = 1
+    if os.path.isfile('Races_Result_' + str(meet) + '.txt'):
       continue
     else:
-      tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
-      table_rows = tempTableEl
+      driver.get(BASE_URL + meet)
+      driver.implicitly_wait(20)
+      # same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
+      same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
+      same_day_links = [x.get_attribute("href") for x in same_day_selel]  
 
-    scraping_race_result(table_rows)  
-      
-    # Get other races on same meet
-    for same_day_link in same_day_links:
-      print("Scraping " + same_day_link)
-      internalRaceCount += 1
-      driver.get(same_day_link)
-      driver.implicitly_wait(5)
+      # Get first race - x columns y rows + race name, going, track type
+      #tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
+      #table_rows = tempTableEl
 
-      
       if not (check_exists_by_xpath(table_row_xpath)):
         continue
       else:
-        table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+        tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
+        table_rows = tempTableEl
+
+      scraping_race_result(table_rows, meet)  
         
-        # Scrape 2nd - n
-        scraping_race_result(table_rows)
+      # Get other races on same meet
+      for same_day_link in same_day_links:
+        print("Scraping " + same_day_link)
+        internalRaceCount += 1
+        driver.get(same_day_link)
+        driver.implicitly_wait(20)
 
-    # Save file as csv
-    res = sorted(race_entry, key = itemgetter(4))
-    res.insert(0, tableHeader)
-    df = pd.DataFrame(res)
-    outname = "Races_Result_" + str(meet)
-    outdir = 'c:/Output'
-    if not os.path.exists(outdir):
-      os.makedirs(outdir)
-  
-    fullname = os.path.join(outdir, outname)    
-    csv_data = df.to_csv("./" + outname + ".txt", index=False)
-    df.to_csv("./" + outname + ".csv", header=False, index=False, encoding="utf-8")
+        
+        if not (check_exists_by_xpath(table_row_xpath)):
+          continue
+        else:
+          table_rows = driver.find_elements(By.XPATH, table_row_xpath)
+          
+          # Scrape 2nd - n
+          scraping_race_result(table_rows, meet)
 
-    csv_data = df.to_csv(fullname + ".txt", index=False)
-    df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
+      # Save file as csv
+      res = sorted(race_entry, key = itemgetter(4))
+      res.insert(0, tableHeader)
+      df = pd.DataFrame(res)
+      outname = "Races_Result_" + str(meet)
+      outdir = 'c:/Output'
+      if not os.path.exists(outdir):
+        os.makedirs(outdir)
+    
+      fullname = os.path.join(outdir, outname)    
+      csv_data = df.to_csv("./" + outname + ".txt", index=False)
+      df.to_csv("./" + outname + ".csv", header=False, index=False, encoding="utf-8")
 
+      csv_data = df.to_csv(fullname + ".txt", index=False)
+      df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
 
-driver.quit()
+  res = sorted(total_race_entry, key=itemgetter(4))
+  res.insert(0, tableHeader)
+  df = pd.DataFrame(res)
+  outname = "raceresult"
+  outdir = 'c:/Output'
+  if not os.path.exists(outdir):
+    os.makedirs(outdir)
+
+  fullname = os.path.join(outdir, outname)    
+  csv_data = df.to_csv("./" + outname + ".txt", index=False)
+  df.to_csv("./" + outname + ".csv", header=False, index=False, encoding="utf-8")
+
+  csv_data = df.to_csv(fullname + ".txt", index=False)
+  df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
+  driver.quit()
+
+dates_list = [dates.split('\n')[i] for i in range(1)]
+scraping_raceresult(dates_list)
