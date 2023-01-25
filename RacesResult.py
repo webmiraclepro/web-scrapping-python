@@ -307,6 +307,7 @@ def scraping_raceresult(dates):
   df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
   driver.quit()
 
-# dates_list = [dates.split('\n')[i] for i in range(len(dates.split('\n')))]
-dates_list = [dates.split('\n')[i] for i in range(5)]
-scraping_raceresult(dates_list)
+# dates_list = [dates.split('\n')[i] for i in range(len(dates.split('\n')) - 1)]
+dates_list = [dates.split('\n')[i] for i in range(3)]
+if dates_list:
+  scraping_raceresult(dates_list)
