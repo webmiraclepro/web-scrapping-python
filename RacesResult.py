@@ -25,9 +25,7 @@ from datelist import *
 #starting webdriver
 BASE_URL_NO_DATE = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx"
 BASE_URL = "https://racing.hkjc.com/racing/information/Chinese/racing/LocalResults.aspx?RaceDate="
-dates=[
-
-]
+dates=[]
 
 xpath_string = [
   "/html/body/div[1]/div[3]/div[2]/div[2]/div[2]/div[3]/p[1]/span[1]",
@@ -132,36 +130,36 @@ def scraping_race_result(table_rows, meet):
         pass
       else:
         rowEntry.append("")
-
-    sectEl = driver.find_element(By.XPATH, race_sects_xpath) 
-    sects = sectEl.find_elements(By.TAG_NAME, 'td')[::-1]
-    race_Sect = ["" for i in range(10)]
-    for i in range(len(sects) - 2):
-      race_Sect[sectsmapping[i]] = sects[i].text
+    if (check_exists_by_xpath(race_sects_xpath)):
+      sectEl = driver.find_element(By.XPATH, race_sects_xpath) 
+      sects = sectEl.find_elements(By.TAG_NAME, 'td')[::-1]
+      race_Sect = ["" for i in range(10)]
+      for i in range(len(sects) - 2):
+        race_Sect[sectsmapping[i]] = sects[i].text
     
-    race_sect51_52 = list(filter(None, race_Sect[4].split("\n")[1].split(" ")))
-    race_Sect[6] = race_sect51_52[0]
-    race_Sect[7] = race_sect51_52[1]
-    race_sect61_62 = list(filter(None, race_Sect[5].split("\n")[1].split(" ")))
-    race_Sect[8] = race_sect61_62[0]
-    race_Sect[9] = race_sect61_62[1]
-    race_Sect[4] = race_Sect[4].split("\n")[0]
-    race_Sect[5] = race_Sect[5].split("\n")[0]
+      race_sect51_52 = list(filter(None, race_Sect[4].split("\n")[1].split(" ")))
+      race_Sect[6] = race_sect51_52[0]
+      race_Sect[7] = race_sect51_52[1]
+      race_sect61_62 = list(filter(None, race_Sect[5].split("\n")[1].split(" ")))
+      race_Sect[8] = race_sect61_62[0]
+      race_Sect[9] = race_sect61_62[1]
+      race_Sect[4] = race_Sect[4].split("\n")[0]
+      race_Sect[5] = race_Sect[5].split("\n")[0]
 
 
-    race_venu = list(filter(None, rowEntry[3].split(" ")))
-    rowEntry[3] = race_venu[2]
-    temp = re.findall(r'\d+', rowEntry[4])
-    race_no_index = list(map(int, temp))
-    rowEntry[1] = race_replay + "0" + str(race_no_index[0]) + "&lang=chi"
-    rowEntry[4] = race_no_index[0]
-    rowEntry[5] = race_no_index[1]
-    race_class_distance_rating = rowEntry[7].split(" - ")
-    rowEntry[7] = race_class_distance_rating[0]
-    rowEntry[8] = re.findall(r'\d+', race_class_distance_rating[1])[0]
-    rowEntry[9] = re.findall(r'\(([^)]+)\)', race_class_distance_rating[2])[0] if len(race_class_distance_rating) > 2 else ""
-    rowEntry[11] = rowEntry[11].split(" ")[1].replace(",", "")
-    for sect in race_Sect: rowEntry.append(sect)
+      race_venu = list(filter(None, rowEntry[3].split(" ")))
+      rowEntry[3] = race_venu[2]
+      temp = re.findall(r'\d+', rowEntry[4])
+      race_no_index = list(map(int, temp))
+      rowEntry[1] = race_replay + "0" + str(race_no_index[0]) + "&lang=chi"
+      rowEntry[4] = race_no_index[0]
+      rowEntry[5] = race_no_index[1]
+      race_class_distance_rating = rowEntry[7].split(" - ")
+      rowEntry[7] = race_class_distance_rating[0]
+      rowEntry[8] = re.findall(r'\d+', race_class_distance_rating[1])[0]
+      rowEntry[9] = re.findall(r'\(([^)]+)\)', race_class_distance_rating[2])[0] if len(race_class_distance_rating) > 2 else ""
+      rowEntry[11] = rowEntry[11].split(" ")[1].replace(",", "")
+      for sect in race_Sect: rowEntry.append(sect)
 
     cols = row.find_elements(By.TAG_NAME, 'td')
     for col in cols: rowEntry.append(col.text)
@@ -245,8 +243,9 @@ def scraping_raceresult(dates):
       driver.get(BASE_URL + meet)
       driver.implicitly_wait(20)
       # same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
-      same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
-      same_day_links = [x.get_attribute("href") for x in same_day_selel]  
+      if (check_exists_by_xpath(same_day_race_link_xpaths)):
+        same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
+        same_day_links = [x.get_attribute("href") for x in same_day_selel]  
 
       # Get first race - x columns y rows + race name, going, track type
       #tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
@@ -292,7 +291,7 @@ def scraping_raceresult(dates):
       csv_data = df.to_csv(fullname + ".txt", index=False)
       df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
 
-  res = sorted(total_race_entry, key=itemgetter(4))
+  res = sorted(total_race_entry, key=itemgetter(2))
   res.insert(0, tableHeader)
   df = pd.DataFrame(res)
   outname = "raceresult"
@@ -308,5 +307,6 @@ def scraping_raceresult(dates):
   df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
   driver.quit()
 
-dates_list = [dates.split('\n')[i] for i in range(1)]
+# dates_list = [dates.split('\n')[i] for i in range(len(dates.split('\n')))]
+dates_list = [dates.split('\n')[i] for i in range(5)]
 scraping_raceresult(dates_list)
