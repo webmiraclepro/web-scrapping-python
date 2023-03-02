@@ -1,7 +1,5 @@
 #import libraries
 from bs4 import BeautifulSoup
-import requests
-import string
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -242,15 +240,11 @@ def scraping_raceresult(dates):
     else:
       driver.get(BASE_URL + meet)
       driver.implicitly_wait(20)
-      # same_day_selel = driver.find_elements(By.XPATH, same_day_race_link_xpaths)
       if (check_exists_by_xpath(same_day_race_link_xpaths)):
         same_day_selel = wait.until(EC.presence_of_all_elements_located((By.XPATH, same_day_race_link_xpaths)))
         same_day_links = [x.get_attribute("href") for x in same_day_selel]  
 
       # Get first race - x columns y rows + race name, going, track type
-      #tempTableEl = wait.until(EC.presence_of_all_elements_located((By.XPATH, table_row_xpath)))
-      #table_rows = tempTableEl
-
       if not (check_exists_by_xpath(table_row_xpath)):
         continue
       else:
@@ -307,7 +301,6 @@ def scraping_raceresult(dates):
   df.to_csv(fullname + ".csv", header=False, index=False, encoding="utf-8")
   driver.quit()
 
-# dates_list = [dates.split('\n')[i] for i in range(len(dates.split('\n')) - 1)]
 dates_list = [dates.split('\n')[i] for i in range(3)]
 if dates_list:
   scraping_raceresult(dates_list)
